@@ -234,20 +234,18 @@ async function testElevenLabs(){
 async function loadOakDExamples(){
   const d = await api('/oak_d_list');
   if(d.status === 'ok' && Array.isArray(d.examples) && d.examples.length){
-    const currentId = d.current || 'bender-janet';
+    const selectedIds = Array.isArray(d.selected_examples) ? d.selected_examples : (d.current && d.current !== 'bender-janet' ? [d.current] : []);
     const fullList = [{id:'bender-janet', name:'Normal View', description:'Default Janet detection mode'}, ...d.examples];
     const btnHtml = fullList.map(ex => {
-      const active = ex.id === currentId ? ' active' : '';
+      const active = ex.id === 'bender-janet' ? (selectedIds.length ? '' : ' active') : (selectedIds.includes(ex.id) ? ' active' : '');
       return `<button class="example-btn${active}" data-example="${esc(ex.id)}" onclick="selectOakDExample('${esc(ex.id)}')" title="${esc(ex.description || '')}">${esc(ex.name || ex.id)}</button>`;
     }).join('');
     setHtml('oak-d-list', btnHtml);
     setHtml('mode-list', btnHtml);
-    if(d.current){
-      const oakState = (await api('/readings_basic')).oak_d || {};
-      const model = oakState.model || '';
-      setText('oak-d-current', d.current === 'bender-janet' ? 'No example active (Normal mode)' : `${d.current}${model ? ` (model: ${model})` : ''}`);
-    }
-    setText('oak-d-status', `Loaded ${d.examples.length} example(s)`);
+    const oakState = (await api('/readings_basic')).oak_d || {};
+    const model = oakState.model || '';
+    setText('oak-d-current', selectedIds.length ? `${selectedIds.join(', ')}${model ? ` (model: ${model})` : ''}` : 'No example active (Normal mode)');
+    setText('oak-d-status', `Loaded ${d.examples.length} example(s). Active: ${selectedIds.length}`);
   } else {
     setHtml('oak-d-list', '<p class="note">No examples found.</p>');
     setText('oak-d-status', d.message || 'No examples available');
@@ -255,11 +253,11 @@ async function loadOakDExamples(){
 }
 
 async function selectOakDExample(exampleId){
-  const d = await postJson('/oak_d_example', {example: exampleId});
+  const d = await postJson('/oak_d_example', {example: exampleId, toggle: true});
   setText('oak-d-status', d.message || 'Example updated');
-  const currentLabel = exampleId === 'bender-janet' ? 'No example active (Normal mode)' : `${exampleId}${d.model ? ` (model: ${d.model})` : ''}`;
+  const active = Array.isArray(d.selected_examples) ? d.selected_examples : [];
+  const currentLabel = active.length ? `${active.join(', ')}${d.model ? ` (model: ${d.model})` : ''}` : 'No example active (Normal mode)';
   setText('oak-d-current', currentLabel);
-  $('mode-menu')?.classList.add('hidden');
   await loadOakDExamples();
 }
 

@@ -55,7 +55,7 @@
 
       <section id="view-oak-d" class="view full-panel">
         <h2>OAK-D Examples</h2>
-        <p class="note">Select a vision example to apply to the front camera feed. Only one example can run at a time.</p>
+        <p class="note">Select one or more vision examples to apply to the front camera feed. Click modes to toggle them on/off; use Return to Normal to clear all.</p>
         <div class="grid two">
           <div class="card">
             <h3>Available Examples</h3>
@@ -63,7 +63,7 @@
             <p id="oak-d-status" class="note">Loading examples...</p>
           </div>
           <div class="card">
-            <h3>Current Example</h3>
+            <h3>Current Selection</h3>
             <div id="oak-d-current" class="oak-d-current">No example active (Normal mode)</div>
             <button id="oak-d-disable" class="primary">Return to Normal</button>
           </div>
@@ -233,7 +233,6 @@
       <div class="panel"><h3 id="detections-title">Detections (0 FPS)</h3><div id="detections-list"><p class="note">No detections yet...</p></div><p id="dashboard-status" class="note">Dashboard starting...</p></div>
     </aside>
   </main>
-  <script src="/static/js/oak-d.js?v={{ version }}"></script>
   <script src="/static/js/app.js?v={{ version }}"></script>
 </body>
 </html>

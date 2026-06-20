@@ -315,14 +315,34 @@ def create_app(janet):
         ]
         
         oak_state = janet.state.section('oak_d') or {}
-        current = oak_state.get('current_example', 'bender-janet')
-        return jsonify({'status': 'ok', 'examples': examples, 'current': current})
+        selected_modes = oak_state.get('selected_modes')
+        if not isinstance(selected_modes, list):
+            legacy_mode = str(oak_state.get('mode', 'normal') or 'normal')
+            selected_modes = [] if legacy_mode == 'normal' else [legacy_mode]
+        selected_modes = [str(m).strip() for m in selected_modes if str(m).strip() and str(m).strip() != 'normal']
+
+        mode_to_example = {
+            'objectron-3d': 'objectron-3d',
+            'object-distance': 'object-distance',
+            'gaze-detection': 'gaze-detection',
+            'human-pose': 'human-pose',
+            'people-focus': 'people-focus',
+            'edge-vision': 'edge-vision',
+            'depth-style': 'depth-style',
+            'night-boost': 'night-boost',
+            'tracking-reticle': 'tracking-reticle',
+            'social-distance': 'social-distance',
+        }
+        selected_examples = [mode_to_example[m] for m in selected_modes if m in mode_to_example]
+        current = selected_examples[0] if selected_examples else 'bender-janet'
+        return jsonify({'status': 'ok', 'examples': examples, 'current': current, 'selected_modes': selected_modes, 'selected_examples': selected_examples})
 
     @app.route('/oak_d_example', methods=['POST'])
     def oak_d_example():
         """Apply a curated OAK-D showcase mode to the camera feed."""
         p = request.get_json(silent=True) or {}
         example_id = p.get('example', 'bender-janet')
+        toggle = bool(p.get('toggle', True))
         mode_map = {
             'bender-janet': 'normal',
             'smart-detection': 'normal',
@@ -343,14 +363,47 @@ def create_app(janet):
         # Do not restart the DepthAI pipeline for showcase mode changes.
         # We keep the detector model steady and only switch overlay/behavior mode.
         target_model = (janet.state.section('detection_model') or {}).get('name', config.DETECTION_MODEL_NAME)
-
         mode = mode_map[example_id]
-        if example_id == 'bender-janet':
-            janet.state.update('oak_d', current_example='bender-janet', mode='normal', message='Returned to normal operating mode', model=target_model)
-            return jsonify({'status': 'ok', 'message': 'Returned to normal operating mode', 'model': target_model})
 
-        janet.state.update('oak_d', current_example=example_id, mode=mode, message=f'Applied OAK-D showcase: {example_id}', model=target_model)
-        return jsonify({'status': 'ok', 'message': f'Applied OAK-D showcase: {example_id}', 'model': target_model})
+        oak_state = janet.state.section('oak_d') or {}
+        selected_modes = oak_state.get('selected_modes')
+        if not isinstance(selected_modes, list):
+            legacy_mode = str(oak_state.get('mode', 'normal') or 'normal')
+            selected_modes = [] if legacy_mode == 'normal' else [legacy_mode]
+        selected_modes = [str(m).strip() for m in selected_modes if str(m).strip() and str(m).strip() != 'normal']
+
+        if mode == 'normal':
+            selected_modes = []
+            message = 'Returned to normal operating mode'
+        elif toggle:
+            if mode in selected_modes:
+                selected_modes = [m for m in selected_modes if m != mode]
+                message = f'Disabled OAK-D showcase: {example_id}'
+            else:
+                selected_modes.append(mode)
+                message = f'Enabled OAK-D showcase: {example_id}'
+        else:
+            selected_modes = [mode]
+            message = f'Applied OAK-D showcase: {example_id}'
+
+        mode_to_example = {
+            'objectron-3d': 'objectron-3d',
+            'object-distance': 'object-distance',
+            'gaze-detection': 'gaze-detection',
+            'human-pose': 'human-pose',
+            'people-focus': 'people-focus',
+            'edge-vision': 'edge-vision',
+            'depth-style': 'depth-style',
+            'night-boost': 'night-boost',
+            'tracking-reticle': 'tracking-reticle',
+            'social-distance': 'social-distance',
+        }
+        selected_examples = [mode_to_example[m] for m in selected_modes if m in mode_to_example]
+        current_example = selected_examples[0] if selected_examples else 'bender-janet'
+        primary_mode = selected_modes[0] if selected_modes else 'normal'
+        full_message = f'{message}. Active modes: {", ".join(selected_examples) if selected_examples else "none"}'
+        janet.state.update('oak_d', current_example=current_example, selected_examples=selected_examples, selected_modes=selected_modes, mode=primary_mode, message=full_message, model=target_model)
+        return jsonify({'status': 'ok', 'message': full_message, 'model': target_model, 'selected_examples': selected_examples, 'selected_modes': selected_modes})
 
     @app.route('/ai_detection_toggle', methods=['POST'])
     def ai_detection_toggle():

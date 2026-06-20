@@ -94,7 +94,7 @@ class VisionManager:
         cv2.putText(frame,line,(10,frame.shape[0]-12),cv2.FONT_HERSHEY_SIMPLEX,0.32,(0,0,0),3,cv2.LINE_AA)
         cv2.putText(frame,line,(10,frame.shape[0]-12),cv2.FONT_HERSHEY_SIMPLEX,0.32,color,1,cv2.LINE_AA)
 
-    def apply_oak_d_showcase(self, frame, readings, mode):
+    def apply_oak_d_showcase(self, frame, readings, mode, draw_badge=True):
         if mode == 'objectron-3d':
             h, w = frame.shape[:2]
             for r in readings:
@@ -200,9 +200,26 @@ class VisionManager:
                 cv2.line(frame, (cx, cy), (tx, ty), (0, 200, 255), 2)
                 cv2.circle(frame, (tx, ty), 16, (0, 200, 255), 2)
 
-        if mode and mode != 'normal':
+        if draw_badge and mode and mode != 'normal':
             cv2.rectangle(frame, (8, 8), (280, 36), (0, 0, 0), -1)
             cv2.putText(frame, f'OAK-D Showcase: {mode}', (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (87, 242, 135), 1, cv2.LINE_AA)
+
+    def apply_oak_d_showcases(self, frame, readings, modes):
+        cleaned = []
+        for mode in modes or []:
+            m = str(mode or '').strip()
+            if not m or m == 'normal' or m in cleaned:
+                continue
+            cleaned.append(m)
+        if not cleaned:
+            return
+        for mode in cleaned:
+            self.apply_oak_d_showcase(frame, readings, mode, draw_badge=False)
+        label = ', '.join(cleaned[:3])
+        if len(cleaned) > 3:
+            label += f' +{len(cleaned)-3}'
+        cv2.rectangle(frame, (8, 8), (440, 36), (0, 0, 0), -1)
+        cv2.putText(frame, f'OAK-D Showcase: {label}', (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (87, 242, 135), 1, cv2.LINE_AA)
 
     def _front_worker(self):
         if cv2 is None or dai is None:
@@ -232,7 +249,13 @@ class VisionManager:
                         detection_section = self.state.section('detection')
                         ai_enabled = detection_section.get('ai_enabled', True)
                         oak_d_state = self.state.section('oak_d')
-                        oak_mode = oak_d_state.get('mode', 'normal')
+                        oak_modes = oak_d_state.get('selected_modes')
+                        if not isinstance(oak_modes, list):
+                            legacy_mode = str(oak_d_state.get('mode', 'normal') or 'normal')
+                            oak_modes = [] if legacy_mode == 'normal' else [legacy_mode]
+                        oak_modes = [str(m).strip() for m in oak_modes if str(m).strip() and str(m).strip() != 'normal']
+                        # Keep mode order while removing duplicates.
+                        oak_modes = list(dict.fromkeys(oak_modes))
                         
                         if ai_enabled:
                             for det in detections:
@@ -243,7 +266,7 @@ class VisionManager:
                                 readings.append(item)
                                 draw_items.append((bbox, label, conf))
 
-                        if oak_mode == 'people-focus':
+                        if 'people-focus' in oak_modes:
                             readings = [r for r in readings if 'person' in str(r.get('label', '')).lower()]
                             draw_items = [d for d in draw_items if 'person' in str(d[1]).lower()]
 
@@ -269,7 +292,7 @@ class VisionManager:
                         fps_counter+=1; now=time.time(); elapsed=now-fps_timer
                         if elapsed>=1.0:
                             current_fps=fps_counter/elapsed; fps_counter=0; fps_timer=now
-                        self.apply_oak_d_showcase(frame, readings, oak_mode)
+                        self.apply_oak_d_showcases(frame, readings, oak_modes)
                         self.state.update(fps=round(current_fps,1), detections=readings, front_camera_ready=True, front_frame_age_seconds=round(time.time()-self.frame_time,2) if self.frame_time else None)
                         self.draw_voice_overlay(frame); self.set_latest_frame(frame)
             except Exception as exc:
