@@ -1,0 +1,12 @@
+flask
+numpy
+opencv-python-headless
+SpeechRecognition
+soundfile
+requests
+# Raspberry Pi / robot hardware packages are normally installed on the Pi:
+# depthai
+# RPi.GPIO
+# smbus2
+
+edge-tts

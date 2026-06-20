@@ -1,0 +1,3 @@
+﻿JanetV16 branch created from the local backup of JanetV14_11_project.
+This folder is the new Pi-side working branch for V16 mapping work.
+Remote Pi should keep only JanetV16 and JanetEnv.

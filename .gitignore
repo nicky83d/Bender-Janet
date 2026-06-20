@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual env
+venv/
+.venv/
+janetenv/
+
+# Runtime/cache
+.cache/
+.depthai_cached_models/
+*.tar.gz
+
+# Data and generated assets
+data/
+*.jpg
+*.jpeg
+*.png
+*.mp4
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
